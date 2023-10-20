@@ -1,2 +1,2 @@
 # SVM
-svm implementation in c++
+SVM implementation in c++
