@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdlib>
 #include <functional>
@@ -28,7 +29,7 @@ struct FixedVector {
 };
 
 enum ClassificationType { Negative, Zero, Positive };
-const double ClassificationEps = 1e-8;
+const double ClassificationEps = 1e-3;
 
 template <std::floating_point svm_float_t = double>
 int sgn(svm_float_t x);

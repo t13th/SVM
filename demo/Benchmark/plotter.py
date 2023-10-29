@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import csv
+
 name = 'result.csv'
 with open(name, 'r') as file:
     reader = csv.reader(file)
@@ -17,7 +18,7 @@ plt.figure(figsize=(24, 24))
 
 plt.plot(x, y, linewidth=6.0)
 plt.scatter([p[0] for p in points], [p[1] for p in points], c=[
-            p[2] for p in points], cmap='viridis')
+            p[2] for p in points], linewidths=[p[3] for p in points], cmap='bwr')
 
 plt.xlabel('X-axis')
 plt.ylabel('Y-axis')

@@ -4,13 +4,9 @@
 #include <cfloat>
 #include <cstddef>
 #include <functional>
-#include <iostream>
 #include <iterator>
 #include <numeric>
-#include <ostream>
 #include <random>
-#include <stdexcept>
-#include <string>
 #include <vector>
 
 #include "../SVM/SVM.hpp"
@@ -21,7 +17,8 @@ template <std::size_t Dimension, std::floating_point svm_float_t,
           std::random_access_iterator ForwardIterator>
 void SMO(
     SVM<Dimension, svm_float_t>&, const ForwardIterator&,
-    const ForwardIterator&, svm_float_t, svm_float_t, size_t, size_t = 0,
+    const ForwardIterator&, svm_float_t, svm_float_t, size_t,
+    std::vector<svm_float_t>& = std::vector<svm_float_t>(), size_t = 0,
     const std::function<void(size_t)>& = [](size_t) {},
     const std::function<void(double)>& = [](double) {});
 
@@ -35,7 +32,8 @@ template <std::size_t Dimension, std::floating_point svm_float_t,
           std::random_access_iterator ForwardIterator>
 void SMO(SVM<Dimension, svm_float_t>& svm, const ForwardIterator& first,
          const ForwardIterator& last, svm_float_t Tolerance,
-         svm_float_t DifferenceLimit, size_t EpochLimit, size_t seed,
+         svm_float_t DifferenceLimit, size_t EpochLimit,
+         std::vector<svm_float_t>& Lambda, size_t seed,
          const std::function<void(size_t)>& ProgressCallback,
          const std::function<void(double)>& DifferenceCallback) {
   const auto& DataSet = first;
@@ -45,22 +43,12 @@ void SMO(SVM<Dimension, svm_float_t>& svm, const ForwardIterator& first,
 
   int n = std::distance(first, last);
 
-  auto positive_cnt = std::count_if(
-      first, last, [](const auto& a) { return a.classification == Positive; });
-  auto negative_cnt = std::count_if(
-      first, last, [](const auto& a) { return a.classification == Negative; });
-  if (positive_cnt + negative_cnt != n)
-    throw std::runtime_error(std::to_string(n - positive_cnt - negative_cnt) +
-                             " Point(s) falls on segment plane.");
-  if (positive_cnt > negative_cnt * 2 || negative_cnt > positive_cnt * 2)
-    std::cerr << std::endl
-              << "Very unbalanced seperation of " << positive_cnt << ":"
-              << negative_cnt << std::endl;
-
   std::mt19937 engine(seed);
   std::uniform_real_distribution<svm_float_t> LambdaDistribution(-1.0, 1.0);
-  std::vector<svm_float_t> Lambda(n);
-  std::ranges::generate(Lambda, [&]() { return LambdaDistribution(engine); });
+  if (Lambda.empty()) {
+    Lambda.resize(n);
+    std::ranges::generate(Lambda, [&]() { return LambdaDistribution(engine); });
+  }
   /*
   std::transform(std::execution::seq,first, last, Lambda.begin(), [=](const
   auto& a) { if (a.classification == ClassificationType::Positive) return

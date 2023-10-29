@@ -18,17 +18,19 @@
 #include "../../modules/TestSampleGenerator/TestSampleGenerator.hpp"
 
 const int Dimension = 2;
-const int n = 2000;
+const int n = 1000;
 
 void output(double x) {
   std::cout << std::setprecision(6) << std::setw(9) << x << " ";
 }
 
 int main() {
+  std::cout << std::fixed;
+
   size_t seed = std::chrono::system_clock::now().time_since_epoch().count();
   std::vector<SVM::Sample<Dimension>> data;
-  SVM::TestSampleGenerator<Dimension> gen(seed);
-  for (int i = 0; i < n; i++) data.push_back(gen());
+  SVM::TestSampleGenerator<Dimension, true> gen(seed);
+  for (int i = 0; i < n; i++) data.push_back(gen(0.1, 5e-2));
   auto Seg = gen.GetSegmentation();
 
   std::ranges::for_each(Seg.weight, output);
@@ -49,15 +51,16 @@ int main() {
 
   size_t progress = 0;
   double difference = 0;
-  const size_t EpochLimit = 50;
+  const size_t EpochLimit = 200;
 
   std::mutex mtx;
   std::condition_variable cv;
   bool SMOFinished = false;
+  std::vector<double> Lambda;
 
   auto SMOFunc = [&]() {
     SVM::SMO(
-        svm, data.begin(), data.end(), 1e1, 1e-13, EpochLimit, seed,
+        svm, data.begin(), data.end(), 1e0, 1e-14, EpochLimit, Lambda, seed,
         [&](size_t _progress) { progress = _progress; },
         [&](double _difference) { difference = _difference; });
     std::unique_lock<std::mutex> lock(mtx);
@@ -71,13 +74,13 @@ int main() {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     std::cout.put('\r');
     int curser_pos = 0;
-    std::cout << std::setprecision(5) << std::setw(5)
-              << double(int(double(progress) / EpochLimit * 10000)) / 100
-              << "% |";
+    std::cout << std::setprecision(1) << std::setw(5)
+              << double(progress) / EpochLimit * 100 << "% |";
     for (; curser_pos * EpochLimit < progress * bar_len; curser_pos++)
       std::cout.put('*');
     for (; curser_pos < bar_len; curser_pos++) std::cout.put(' ');
-    std::cout << "| " << difference << "            " << std::flush;
+    std::cout << "| " << std::scientific << difference << std::fixed
+              << "            " << std::flush;
     {
       std::unique_lock<std::mutex> lock(mtx);
       if (SMOFinished) {
@@ -90,18 +93,21 @@ int main() {
   int correct_cnt = std::ranges::count_if(data, [&](const auto& sample) {
     return svm(sample.data) == sample.classification;
   });
-  std::cout << "Classify accuracy:" << std::setprecision(5) << std::setw(5)
-            << double(int(double(correct_cnt) / n * 10000)) / 100 << "%"
-            << std::endl;
+  std::cout << "Generator accuracy:" << std::setprecision(2) << std::setw(6)
+            << gen.FaultRate() * 100 << "%" << std::endl;
+  std::cout << "Classify accuracy:" << std::setprecision(2) << std::setw(6)
+            << double(correct_cnt) / n * 100 << "%" << std::endl;
   std::ranges::for_each(svm.segmentation.weight, output);
   std::cout << "+ ";
   output(svm.segmentation.bias);
+  std::cout << std::endl;
 
   std::fstream out("result.csv", std::ios::out);
   out << svm.segmentation.weight[0] << "," << svm.segmentation.weight[1] << ","
       << svm.segmentation.bias << std::endl;
-  for (auto [c, p] : data)
-    out << p[0] << "," << p[1] << "," << static_cast<int>(c) - 1 << std::endl;
+  for (int i = 0; auto [c, p] : data)
+    out << p[0] << "," << p[1] << "," << static_cast<int>(c) - 1 << ","
+        << (SVM::sgn(Lambda[i++]) ? 5 : 1) << std::endl;
   out.close();
 
   return 0;
