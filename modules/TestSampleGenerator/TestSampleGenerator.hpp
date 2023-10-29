@@ -8,9 +8,9 @@
 
 #include "../Sample/Sample.hpp"
 #include "../SegmentPlane/SegmentPlane.hpp"
-namespace SVM {
+#include "../common/common.hpp"
 
-const double ClassificationEps = 1e-8;
+namespace SVM {
 
 template <std::size_t Dimension, std::floating_point svm_float_t = double>
 class TestSampleGenerator {
@@ -18,7 +18,7 @@ class TestSampleGenerator {
   std::uniform_real_distribution<svm_float_t> FloatDistribution;
   SegmentPlane<Dimension, svm_float_t> Segmentation;
 
-  std::function<svm_float_t()> get_float = [&]() {
+  std::function<svm_float_t()> get_float = [&] {
     return FloatDistribution(Engine);
   };
 
@@ -41,23 +41,19 @@ TestSampleGenerator<Dimension, svm_float_t>::TestSampleGenerator(
     svm_float_t distribution_upperbound)
     : Engine(seed),
       FloatDistribution(distribution_lowerbound, distribution_upperbound) {
-  std::ranges::generate(Segmentation.get_weight(), get_float);
-  Segmentation.get_bias() = get_float();
+  std::ranges::generate(Segmentation.weight, get_float);
+  Segmentation.bias = get_float() / 2;
 };
 
 template <std::size_t Dimension, std::floating_point svm_float_t>
 Sample<Dimension, svm_float_t>
 TestSampleGenerator<Dimension, svm_float_t>::operator()() {
-  while (true) {
-    Sample<Dimension, svm_float_t> sample;
-    std::ranges::generate(sample.get_data(), get_float);
-    auto &&classfication = std::transform_reduce(
-        Segmentation.get_weight().begin(), Segmentation.get_weight().end(),
-        sample.get_data().begin(), Segmentation.get_bias());
-    sample.get_type() =
-        static_cast<ClassificationType>(classfication > 0 ? 0 : 1);
-    if (fabs(classfication) > ClassificationEps) return sample;
-  }
+  Sample<Dimension, svm_float_t> sample;
+  std::ranges::generate(sample.data, get_float);
+  auto &&classfication = Segmentation.weight * sample.data + Segmentation.bias;
+  sample.classification =
+      static_cast<ClassificationType>(sgn(classfication) + 1);
+  return sample;
 };
 
 template <std::size_t Dimension, std::floating_point svm_float_t>

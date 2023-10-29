@@ -1,41 +1,19 @@
 #ifndef __SVM_SAMPLE_HPP__
 #define __SVM_SAMPLE_HPP__
 
-#include <array>
 #include <cstddef>
-namespace SVM {
 
-enum ClassificationType { Positive = 1, Negative = -1 };
+#include "../common/common.hpp"
+
+namespace SVM {
 
 template <std::size_t Dimension, std::floating_point svm_float_t = double>
-class Sample {
-  ClassificationType type;
-  std::array<svm_float_t, Dimension> data;
+struct Sample {
+  ClassificationType classification;
+  FixedVector<Dimension, svm_float_t> data;
 
- public:
-  svm_float_t& operator[](int) const;
-  ClassificationType& get_type();
-  std::array<svm_float_t, Dimension>& get_data();
+  svm_float_t& operator[](int index) { return data[index]; }
 };
-
-}  // namespace SVM
-
-//////////implementation//////////
-
-namespace SVM {
-
-template <std::size_t Dimension, std::floating_point svm_float_t>
-svm_float_t& Sample<Dimension, svm_float_t>::operator[](int index) const {
-  return data[index];
-}
-template <std::size_t Dimension, std::floating_point svm_float_t>
-std::array<svm_float_t, Dimension>& Sample<Dimension, svm_float_t>::get_data() {
-  return data;
-}
-template <std::size_t Dimension, std::floating_point svm_float_t>
-ClassificationType& Sample<Dimension, svm_float_t>::get_type() {
-  return type;
-}
 
 }  // namespace SVM
 

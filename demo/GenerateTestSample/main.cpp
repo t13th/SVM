@@ -2,7 +2,6 @@
 #include <chrono>
 #include <iomanip>
 #include <iostream>
-#include <ostream>
 #include <vector>
 
 #include "../../modules/Sample/Sample.hpp"
@@ -20,13 +19,13 @@ int main() {
       std::chrono::system_clock::now().time_since_epoch().count());
   for (int i = 0; i < n; i++) data.push_back(gen());
   auto Seg = gen.GetSegmentation();
-  std::ranges::for_each(Seg.get_weight(), output);
+  std::ranges::for_each(Seg.weight, output);
   std::cout << "+ ";
-  output(Seg.get_bias());
+  output(Seg.bias);
   std::cout << std::endl;
   for (auto& v : data) {
-    std::cout << std::setw(2) << v.get_type() * 2 - 1 << ":( ";
-    std::ranges::for_each(v.get_data(), output);
+    std::cout << std::setw(2) << v.classification - 1 << ":( ";
+    std::ranges::for_each(v.data, output);
     std::cout << ")" << std::endl;
   }
 }

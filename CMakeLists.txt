@@ -7,17 +7,16 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 string(TIMESTAMP COMPILE_TIME %Y%m%d-%H%M%S)
 
-add_definitions(-D__DEBUG__)
-
 if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
   add_definitions(-D__DEBUG__)
+else()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Ofast")
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   add_compile_options(/utf-8)
 endif()
-
-add_compile_options(-static)
 
 include_directories(modules/*)
 file(GLOB MODULES modules/*/*.cpp)
