@@ -44,7 +44,10 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 build
-.cache
 
 # assets
 assets/datasets/breast+cancer+wisconsin+original/*
+
+# tmp
+.cache
+.VSCodeCounter
