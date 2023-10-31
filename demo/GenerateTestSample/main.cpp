@@ -4,8 +4,8 @@
 #include <iostream>
 #include <vector>
 
+#include "../../modules/LinearTestSampleGenerator/LinearTestSampleGenerator.hpp"
 #include "../../modules/Sample/Sample.hpp"
-#include "../../modules/TestSampleGenerator/TestSampleGenerator.hpp"
 
 const int Dimension = 5;
 const int n = 30;
@@ -15,7 +15,7 @@ void output(double x) {
 }
 int main() {
   std::vector<SVM::Sample<Dimension>> data;
-  SVM::TestSampleGenerator<Dimension> gen(
+  SVM::LinearTestSampleGenerator<Dimension> gen(
       std::chrono::system_clock::now().time_since_epoch().count());
   for (int i = 0; i < n; i++) data.push_back(gen());
   auto Seg = gen.GetSegmentation();

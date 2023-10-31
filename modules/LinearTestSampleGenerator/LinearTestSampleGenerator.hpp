@@ -15,8 +15,8 @@ namespace SVM {
 
 template <std::size_t Dimension, bool Flip = false,
           std::floating_point svm_float_t = double>
-class TestSampleGenerator {
-  size_t GenCount = 0, ErrCount = 0;
+class LinearTestSampleGenerator {
+  std::size_t GenCount = 0, ErrCount = 0;
   std::mt19937_64 Engine;
   std::uniform_real_distribution<svm_float_t> FloatDistribution;
   SegmentPlane<Dimension, svm_float_t> Segmentation;
@@ -26,7 +26,8 @@ class TestSampleGenerator {
   };
 
  public:
-  explicit TestSampleGenerator(size_t = 0, svm_float_t = -1, svm_float_t = 1);
+  explicit LinearTestSampleGenerator(std::size_t = 0, svm_float_t = -1,
+                                     svm_float_t = 1);
   Sample<Dimension, svm_float_t> operator()(svm_float_t = 0, svm_float_t = 0);
 
   SegmentPlane<Dimension, svm_float_t> &GetSegmentation() {
@@ -44,9 +45,10 @@ class TestSampleGenerator {
 namespace SVM {
 
 template <std::size_t Dimension, bool Flip, std::floating_point svm_float_t>
-TestSampleGenerator<Dimension, Flip, svm_float_t>::TestSampleGenerator(
-    std::size_t seed, svm_float_t distribution_lowerbound,
-    svm_float_t distribution_upperbound)
+LinearTestSampleGenerator<Dimension, Flip, svm_float_t>::
+    LinearTestSampleGenerator(std::size_t seed,
+                              svm_float_t distribution_lowerbound,
+                              svm_float_t distribution_upperbound)
     : Engine(seed),
       FloatDistribution(distribution_lowerbound, distribution_upperbound) {
   std::ranges::generate(Segmentation.weight, get_float);
@@ -55,7 +57,7 @@ TestSampleGenerator<Dimension, Flip, svm_float_t>::TestSampleGenerator(
 
 template <std::size_t Dimension, bool Flip, std::floating_point svm_float_t>
 Sample<Dimension, svm_float_t>
-TestSampleGenerator<Dimension, Flip, svm_float_t>::operator()(
+LinearTestSampleGenerator<Dimension, Flip, svm_float_t>::operator()(
     svm_float_t FlipPossibility, svm_float_t FlipDistance) {
   GenCount++;
   Sample<Dimension, svm_float_t> sample;
@@ -71,8 +73,7 @@ TestSampleGenerator<Dimension, Flip, svm_float_t>::operator()(
       ErrCount++;
     }
   }
-  sample.classification =
-      static_cast<ClassificationType>(sgn(classfication) + 1);
+  sample.classification = sgn(classfication);
   return sample;
 };
 

@@ -22,17 +22,22 @@ struct FixedVector {
   svm_float_t operator*(const FixedVector<Dimension, svm_float_t>&) const;
   FixedVector operator*(const svm_float_t&) const;
 
+  constexpr const_iterator begin() const { return content.begin(); }
+  constexpr const_iterator end() const { return content.end(); }
   constexpr iterator begin() { return content.begin(); }
   constexpr iterator end() { return content.end(); }
   std::array<svm_float_t, Dimension>* operator->() { return &content; }
   svm_float_t& operator[](int index) { return content[index]; }
 };
 
-enum ClassificationType { Negative, Zero, Positive };
+using ClassificationType = int;
 const double ClassificationEps = 1e-3;
 
 template <std::floating_point svm_float_t = double>
-int sgn(svm_float_t x);
+int sgn(svm_float_t x, svm_float_t = ClassificationEps);
+
+template <typename T>
+using DataCallback = std::function<void(T)>;
 
 }  // namespace SVM
 
@@ -41,8 +46,8 @@ int sgn(svm_float_t x);
 namespace SVM {
 
 template <std::floating_point svm_float_t>
-int sgn(svm_float_t x) {
-  if (std::abs(x) > ClassificationEps) return x > 0 ? 1 : -1;
+int sgn(svm_float_t x, svm_float_t eps) {
+  if (std::abs(x) > eps) return x > 0 ? 1 : -1;
   return 0;
 }
 

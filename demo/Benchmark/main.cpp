@@ -12,13 +12,14 @@
 #include <thread>
 #include <vector>
 
+#include "../../modules/LinearTestSampleGenerator/LinearTestSampleGenerator.hpp"
+#include "../../modules/Optimizer/LinearSMO.hpp"
 #include "../../modules/Optimizer/SMO.hpp"
 #include "../../modules/SVM/SVM.hpp"
 #include "../../modules/Sample/Sample.hpp"
-#include "../../modules/TestSampleGenerator/TestSampleGenerator.hpp"
 
 const int Dimension = 2;
-const int n = 1000;
+const int n = 100;
 
 void output(double x) {
   std::cout << std::setprecision(6) << std::setw(9) << x << " ";
@@ -27,9 +28,10 @@ void output(double x) {
 int main() {
   std::cout << std::fixed;
 
-  size_t seed = std::chrono::system_clock::now().time_since_epoch().count();
+  std::size_t seed =
+      std::chrono::system_clock::now().time_since_epoch().count();
   std::vector<SVM::Sample<Dimension>> data;
-  SVM::TestSampleGenerator<Dimension, true> gen(seed);
+  SVM::LinearTestSampleGenerator<Dimension, false> gen(seed);
   for (int i = 0; i < n; i++) data.push_back(gen(0.1, 5e-2));
   auto Seg = gen.GetSegmentation();
 
@@ -38,7 +40,7 @@ int main() {
   output(Seg.bias);
   std::cout << std::endl;
   for (int cnt = 0; auto& v : data) {
-    std::cout << std::setw(2) << v.classification - 1 << ":( ";
+    std::cout << std::setw(2) << v.classification << ":( ";
     std::ranges::for_each(v.data, output);
     std::cout << ")" << std::endl;
     if (cnt++ > 10) {
@@ -47,28 +49,27 @@ int main() {
     }
   }
 
-  SVM::SVM<Dimension> svm;
+  SVM::SVM<n, Dimension> svm(data.begin(), std::multiplies<>{});
 
-  size_t progress = 0;
+  std::size_t progress = 0;
   double difference = 0;
-  const size_t EpochLimit = 200;
+  const std::size_t EpochLimit = 1e4;
 
   std::mutex mtx;
   std::condition_variable cv;
   bool SMOFinished = false;
-  std::vector<double> Lambda;
 
   auto SMOFunc = [&]() {
     SVM::SMO(
-        svm, data.begin(), data.end(), 1e0, 1e-14, EpochLimit, Lambda, seed,
-        [&](size_t _progress) { progress = _progress; },
+        svm, 1e0, EpochLimit, seed,
+        [&](std::size_t _progress) { progress = _progress; },
         [&](double _difference) { difference = _difference; });
     std::unique_lock<std::mutex> lock(mtx);
     SMOFinished = true;
     cv.notify_one();
   };
 
-  size_t bar_len = 80;
+  std::size_t bar_len = 80;
   std::jthread smo_thread(SMOFunc);
   while (true) {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -90,6 +91,8 @@ int main() {
     }
   }
 
+  SVM::LinearSVM<Dimension> lsvm(svm);
+
   int correct_cnt = std::ranges::count_if(data, [&](const auto& sample) {
     return svm(sample.data) == sample.classification;
   });
@@ -97,17 +100,17 @@ int main() {
             << gen.FaultRate() * 100 << "%" << std::endl;
   std::cout << "Classify accuracy:" << std::setprecision(2) << std::setw(6)
             << double(correct_cnt) / n * 100 << "%" << std::endl;
-  std::ranges::for_each(svm.segmentation.weight, output);
+  std::ranges::for_each(lsvm.segmentation.weight, output);
   std::cout << "+ ";
-  output(svm.segmentation.bias);
+  output(lsvm.segmentation.bias);
   std::cout << std::endl;
 
   std::fstream out("result.csv", std::ios::out);
-  out << svm.segmentation.weight[0] << "," << svm.segmentation.weight[1] << ","
-      << svm.segmentation.bias << std::endl;
+  out << lsvm.segmentation.weight[0] << "," << lsvm.segmentation.weight[1]
+      << "," << lsvm.segmentation.bias << std::endl;
   for (int i = 0; auto [c, p] : data)
-    out << p[0] << "," << p[1] << "," << static_cast<int>(c) - 1 << ","
-        << (SVM::sgn(Lambda[i++]) ? 5 : 1) << std::endl;
+    out << p[0] << "," << p[1] << "," << c << ","
+        << (SVM::sgn(svm.lambda[i++]) ? 5 : 1) << std::endl;
   out.close();
 
   return 0;
