@@ -1,5 +1,5 @@
-#ifndef __TEST_SAMPLE_GENERATOR_HPP__
-#define __TEST_SAMPLE_GENERATOR_HPP__
+#ifndef __SVM_TEST_SAMPLE_GENERATOR_HPP__
+#define __SVM_TEST_SAMPLE_GENERATOR_HPP__
 
 #include <algorithm>
 #include <cstddef>

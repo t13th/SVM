@@ -13,34 +13,36 @@ namespace SVM {
 template <std::size_t DataSetSize, std::size_t Dimension,
           std::floating_point svm_float_t>
 void LinearSMO(SVM<DataSetSize, Dimension, svm_float_t>& svm,
-               svm_float_t Tolerance, std::size_t EpochLimit, std::size_t seed,
+               svm_float_t Tolerance, std::size_t EpochLimit,
+               svm_float_t ModifyLimit, std::size_t seed,
                const DataCallback<std::size_t>& EpochCallback,
                const DataCallback<decltype(svm_float_t())>& ModifyCallback) {
   std::mt19937 engine(seed);
   std::uniform_real_distribution<svm_float_t> LambdaDistribution(-1.0, 1.0);
   std::ranges::generate(svm.lambda,
                         [&]() { return LambdaDistribution(engine); });
+  svm.lambda[0] += -std::transform_reduce(
+      svm.sample.begin(), svm.sample.end(), svm.lambda.begin(), svm_float_t(0),
+      std::plus<>{},
+      [](const auto& v, const auto& L) { return L * v.classification; });
 
   auto sum = std::transform_reduce(
       svm.sample.begin(), svm.sample.end(), svm.lambda.begin(),
       FixedVector<Dimension, svm_float_t>(), std::plus<>{},
       [](const auto& v, const auto& L) {
-        return v.data * (L * (static_cast<int>(v.classification) - 1));
+        return v.data * (L * v.classification);
       });
 
-  size_t Epoch = 0;
-  while (Epoch < EpochLimit) {
-    EpochCallback(Epoch++);
-
+  for (std::size_t epoch = 0; epoch != EpochLimit; epoch++) {
+    svm_float_t modify = 0;
     for (int i = 0; i < DataSetSize; i++)
       for (int j = 0; j < DataSetSize; j++) {
-        if (i == j) continue;
-        auto y_i = svm.sample[i].classification;
-        const auto& x_i = svm.sample[i].data;
+        if (svm.sample[i].classification == svm.sample[j].classification)
+          continue;
         auto& L_i = svm.lambda[i];
-        auto y_j = svm.sample[j].classification;
-        const auto& x_j = svm.sample[j].data;
         auto& L_j = svm.lambda[j];
+        const auto& [y_i, x_i] = svm.sample[i];
+        const auto& [y_j, x_j] = svm.sample[j];
 
         auto tsum = sum - x_i * L_i * y_i - x_j * L_j * y_j;
         auto L_j_low = y_i == y_j
@@ -55,23 +57,28 @@ void LinearSMO(SVM<DataSetSize, Dimension, svm_float_t>& svm,
 
         auto L_y_sum = L_i * y_i + L_j * y_j;
         auto L_i_new = (L_y_sum - L_j_new * y_j) * y_i;
-        auto modify = std::abs(L_i_new - L_i) + std::abs(L_j_new - L_j);
-
-        ModifyCallback(modify);
+        modify += std::abs(L_i_new - L_i) + std::abs(L_j_new - L_j);
 
         L_i = L_i_new;
         L_j = L_j_new;
         sum = tsum + x_i * (L_i * y_i) + x_j * (L_j * y_j);
       }
+    ModifyCallback(modify);
+    EpochCallback(epoch);
+    if (modify < ModifyLimit) break;
   }
-  int supporting_vector_count = 0;
-  svm.bias = 0;
+  svm_float_t min_bias = NAN, max_bias = NAN;
   for (int t = 0; t < DataSetSize; t++) {
     if (sgn(svm.lambda[t]) == 0) continue;
-    supporting_vector_count++;
-    svm.bias -= svm.sample[t].data * sum * svm.sample[t].classification;
+    auto v = svm.sample[t].data * sum;
+    if ((svm.sample[t].classification == 1 && v > max_bias) ||
+        std::isnan(max_bias))
+      max_bias = v;
+    else if ((svm.sample[t].classification == -1 && v < min_bias) ||
+             std::isnan(min_bias))
+      min_bias = v;
   }
-  svm.bias /= supporting_vector_count;
+  svm.bias = -(max_bias + min_bias) / 2;
 }
 
 }  // namespace SVM

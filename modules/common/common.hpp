@@ -5,6 +5,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <numeric>
@@ -38,6 +39,8 @@ int sgn(svm_float_t x, svm_float_t = ClassificationEps);
 
 template <typename T>
 using DataCallback = std::function<void(T)>;
+
+const uint64_t MaxMemUsage = 1l << (10 + 10 + 10);
 
 }  // namespace SVM
 

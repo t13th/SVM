@@ -1,25 +1,20 @@
-#include <algorithm>
 #include <chrono>
 #include <condition_variable>
 #include <cstddef>
-#include <fstream>
-#include <functional>
 #include <iomanip>
 #include <ios>
 #include <iostream>
 #include <mutex>
 #include <ostream>
 #include <thread>
-#include <vector>
 
 #include "../../modules/LinearTestSampleGenerator/LinearTestSampleGenerator.hpp"
-#include "../../modules/Optimizer/LinearSMO.hpp"
 #include "../../modules/Optimizer/SMO.hpp"
 #include "../../modules/SVM/SVM.hpp"
 #include "../../modules/Sample/Sample.hpp"
 
 const int Dimension = 2;
-const int n = 100;
+const int n = 200;
 
 void output(double x) {
   std::cout << std::setprecision(6) << std::setw(9) << x << " ";
@@ -31,7 +26,7 @@ int main() {
   std::size_t seed =
       std::chrono::system_clock::now().time_since_epoch().count();
   std::vector<SVM::Sample<Dimension>> data;
-  SVM::LinearTestSampleGenerator<Dimension, false> gen(seed);
+  SVM::LinearTestSampleGenerator<Dimension, true> gen(seed);
   for (int i = 0; i < n; i++) data.push_back(gen(0.1, 5e-2));
   auto Seg = gen.GetSegmentation();
 
@@ -49,11 +44,14 @@ int main() {
     }
   }
 
-  SVM::SVM<n, Dimension> svm(data.begin(), std::multiplies<>{});
+  SVM::SVM<n, Dimension> svm(data.begin(), [](const auto& a, const auto& b) {
+    auto&& d = a - b;
+    return std::exp(d * d / 0.01 * (-1));
+  });
 
   std::size_t progress = 0;
   double difference = 0;
-  const std::size_t EpochLimit = 1e4;
+  const std::size_t EpochLimit = 30;
 
   std::mutex mtx;
   std::condition_variable cv;
@@ -61,7 +59,7 @@ int main() {
 
   auto SMOFunc = [&]() {
     SVM::SMO(
-        svm, 1e0, EpochLimit, seed,
+        svm, 1e0, EpochLimit, 3.35e-3, seed,
         [&](std::size_t _progress) { progress = _progress; },
         [&](double _difference) { difference = _difference; });
     std::unique_lock<std::mutex> lock(mtx);
@@ -104,14 +102,6 @@ int main() {
   std::cout << "+ ";
   output(lsvm.segmentation.bias);
   std::cout << std::endl;
-
-  std::fstream out("result.csv", std::ios::out);
-  out << lsvm.segmentation.weight[0] << "," << lsvm.segmentation.weight[1]
-      << "," << lsvm.segmentation.bias << std::endl;
-  for (int i = 0; auto [c, p] : data)
-    out << p[0] << "," << p[1] << "," << c << ","
-        << (SVM::sgn(svm.lambda[i++]) ? 5 : 1) << std::endl;
-  out.close();
 
   return 0;
 }

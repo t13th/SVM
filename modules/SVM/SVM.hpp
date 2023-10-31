@@ -23,14 +23,16 @@ template <std::size_t DataSetSize, std::size_t Dimension,
           std::floating_point svm_float_t = double>
 void SMO(
     SVM<DataSetSize, Dimension, svm_float_t>&, svm_float_t, std::size_t,
-    std::size_t = 0, const DataCallback<std::size_t>& = [](std::size_t) {},
+    svm_float_t, std::size_t = 0,
+    const DataCallback<std::size_t>& = [](std::size_t) {},
     const DataCallback<decltype(svm_float_t())>& = [](svm_float_t) {});
 
 template <std::size_t DataSetSize, std::size_t Dimension,
           std::floating_point svm_float_t = double>
 void LinearSMO(
     SVM<DataSetSize, Dimension, svm_float_t>&, svm_float_t, std::size_t,
-    std::size_t = 0, const DataCallback<std::size_t>& = [](std::size_t) {},
+    svm_float_t, std::size_t = 0,
+    const DataCallback<std::size_t>& = [](std::size_t) {},
     const DataCallback<decltype(svm_float_t())>& = [](svm_float_t) {});
 
 //////////end//////////
@@ -50,10 +52,11 @@ class SVM {
  public:
   friend class LinearSVM<Dimension, svm_float_t>;
   friend void SMO<>(SVM<DataSetSize, Dimension, svm_float_t>&, svm_float_t,
-                    std::size_t, std::size_t, const DataCallback<std::size_t>&,
+                    std::size_t, svm_float_t, std::size_t,
+                    const DataCallback<std::size_t>&,
                     const DataCallback<decltype(svm_float_t())>&);
   friend void LinearSMO<>(SVM<DataSetSize, Dimension, svm_float_t>&,
-                          svm_float_t, std::size_t, std::size_t,
+                          svm_float_t, std::size_t, svm_float_t, std::size_t,
                           const DataCallback<std::size_t>&,
                           const DataCallback<decltype(svm_float_t())>&);
 
@@ -98,7 +101,7 @@ ClassificationType SVM<DataSetSize, Dimension, svm_float_t>::operator()(
   auto classfication = std::transform_reduce(
       sample.begin(), sample.end(), lambda.begin(), bias, std::plus<>{},
       [&](const sample_t& xi, const svm_float_t& l) {
-        return l * (kernel(xi.data, data));
+        return xi.classification * l * kernel(xi.data, data);
       });
   return sgn(classfication);
 }
@@ -111,7 +114,9 @@ LinearSVM<Dimension, svm_float_t>::LinearSVM(
   segmentation.weight = std::transform_reduce(
       svm.sample.begin(), svm.sample.end(), svm.lambda.begin(),
       decltype(segmentation.weight)(), std::plus<>{},
-      [&](const sample_t& xi, const svm_float_t& l) { return xi.data * l; });
+      [&](const sample_t& xi, const svm_float_t& l) {
+        return xi.data * l * xi.classification;
+      });
   segmentation.bias = svm.bias;
 }
 

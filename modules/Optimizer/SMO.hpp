@@ -1,8 +1,14 @@
 #ifndef __SVM_SMO_HPP__
 #define __SVM_SMO_HPP__
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <cstddef>
+#include <cstdlib>
 #include <deque>
+#include <functional>
+#include <iostream>
+#include <ostream>
 #include <random>
 #include <utility>
 
@@ -14,101 +20,96 @@ namespace SVM {
 template <std::size_t DataSetSize, std::size_t Dimension,
           std::floating_point svm_float_t>
 void SMO(SVM<DataSetSize, Dimension, svm_float_t>& svm, svm_float_t Tolerance,
-         std::size_t EpochLimit, std::size_t seed,
+         std::size_t EpochLimit, svm_float_t ModifyLimit, std::size_t seed,
          const DataCallback<std::size_t>& EpochCallback,
          const DataCallback<decltype(svm_float_t())>& ModifyCallback) {
   std::mt19937 Engine(seed);
   std::uniform_real_distribution<svm_float_t> RealDistribution(-1, 1);
   std::ranges::generate(svm.lambda, [&] { return RealDistribution(Engine); });
+  svm.lambda[0] += -std::transform_reduce(
+      svm.sample.begin(), svm.sample.end(), svm.lambda.begin(), svm_float_t(0),
+      std::plus<>{},
+      [](const auto& v, const auto& L) { return L * v.classification; });
+
+  std::function<svm_float_t(int, int)> kernel;
+  std::array<svm_float_t, DataSetSize * (1 + DataSetSize) / 2>* kernel_save =
+      nullptr;
+  if constexpr (DataSetSize * (1 + DataSetSize) / 2 * sizeof(svm_float_t) <=
+                MaxMemUsage) {
+    kernel_save =
+        new std::array<svm_float_t, DataSetSize * (1 + DataSetSize) / 2>;
+    for (int i = 0; i < DataSetSize; i++)
+      for (int j = 0; j <= i; j++)
+        (*kernel_save)[(i + 1) * i / 2 + j] =
+            svm.kernel(svm.sample[i].data, svm.sample[j].data);
+    kernel = [&](int i, int j) {
+      if (i < j) std::swap(i, j);
+      return (*kernel_save)[(i + 1) * i / 2 + j];
+    };
+  } else
+    kernel = [&](int i, int j) {
+      return svm.kernel(svm.sample[i].data, svm.sample[j].data);
+    };
 
   FixedVector<DataSetSize, svm_float_t> E;
-  for (int i = 0; i < DataSetSize; i++)
-    E[i] = svm(svm.sample[i].data) - svm.sample[i].classification;
-
-  std::deque<int> violate;
-  int index_when_no_violate = 0;
-  auto is_violate = [&](int i, svm_float_t e) {
-    if (sgn(e) == -1 || sgn(Tolerance - e) == 1) return 2;
-    auto& yi = svm.sample[i].classification;
-    auto g_yi = (E[i] + yi) * yi;
-    if (sgn(e) == 0) return int(sgn(g_yi - 1) >= 0);
-    if (sgn(Tolerance - e) == 0) return int(sgn(g_yi - 1) <= 0);
-    return 0;
-  };
-
   for (int i = 0; i < DataSetSize; i++) {
-    auto&& v = is_violate(i, E[i]);
-    if (v == 2)
-      violate.push_front(i);
-    else if (v == 1)
-      violate.push_back(i);
+    E[i] = svm.bias - svm.sample[i].classification;
+    for (int j = 0; j < DataSetSize; j++)
+      E[i] += svm.lambda[j] * svm.sample[j].classification * kernel(i, j);
   }
 
   for (std::size_t epoch = 0; epoch != EpochLimit; epoch++) {
-    int i, j;
-    if (!violate.empty()) {
-      i = violate.front();
-      violate.pop_front();
-    } else {
-      i = index_when_no_violate;
-      index_when_no_violate = (index_when_no_violate + 1) % DataSetSize;
-    }
-    std::swap(E[0], E[i]);
-    if (sgn(E[i]) > 0)
-      j = std::min_element(E.begin() + 1, E.end()) - E.begin();
-    else
-      j = std::max_element(E.begin() + 1, E.end()) - E.begin();
-    if (j == i) j = 0;
-    std::swap(E[0], E[i]);
+    svm_float_t modify = 0;
+    for (int i = 0; i < DataSetSize; i++)
+      for (int j = 0; j < DataSetSize; j++) {
+        if (svm.sample[i].classification == svm.sample[j].classification)
+          continue;
 
-    auto &L_i = svm.lambda[i], &L_j = svm.lambda[j];
-    const auto& [y_i, y_i_d] = svm.sample[i];
-    const auto& [y_j, y_j_d] = svm.sample[j];
+        auto& L_i = svm.lambda[i];
+        auto& L_j = svm.lambda[j];
+        const auto& [y_i, x_i] = svm.sample[i];
+        const auto& [y_j, x_j] = svm.sample[j];
 
-    auto L_i_unclip =
-        L_i + y_i * (E[j] - E[i]) /
-                  (svm.kernel(y_i_d, y_i_d) + svm.kernel(y_j_d, y_j_d) -
-                   2 * svm.kernel(y_i_d, y_j_d));
-    auto L_i_low = y_i == y_j ? std::max(svm_float_t(0), L_i + L_j - Tolerance)
-                              : std::max(svm_float_t(0), L_i - L_j);
-    auto L_i_high = y_i == y_j ? std::min(Tolerance, L_i + L_j)
-                               : std::min(Tolerance, Tolerance + L_i - L_j);
-    auto L_i_new = std::clamp(L_i_unclip, L_i_low, L_i_high);
+        auto L_j_low = y_i == y_j
+                           ? std::max(svm_float_t(0), L_i + L_j - Tolerance)
+                           : std::max(svm_float_t(0), L_j - L_i);
+        auto L_j_high = y_i == y_j ? std::min(Tolerance, L_i + L_j)
+                                   : std::min(Tolerance, Tolerance + L_j - L_i);
+        auto L_j_new = std::clamp(
+            L_j + y_j * (E[i] - E[j]) /
+                      (kernel(i, i) + kernel(j, j) - 2 * kernel(i, j)),
+            L_j_low, L_j_high);
 
-    auto L_y_sum = L_i * y_i + L_j * y_j;
-    auto L_j_new = (L_y_sum - L_i_new * y_i) * y_j;
+        auto L_y_sum = L_i * y_i + L_j * y_j;
+        auto L_i_new = (L_y_sum - L_j_new * y_j) * y_i;
 
-    for (int t = 0; t < DataSetSize; t++) {
-      E[t] += svm.sample[i].classification * (L_i_new - L_i) *
-                  (svm.kernel(svm.sample[i].data, svm.sample[t].data)) +
-              svm.sample[j].classification * (L_j_new - L_j) *
-                  (svm.kernel(svm.sample[j].data, svm.sample[t].data));
-    }
+        for (int t = 0; t < DataSetSize; t++) {
+          E[t] += svm.sample[i].classification * (L_i_new - L_i) * kernel(i, t);
+          E[t] += svm.sample[j].classification * (L_j_new - L_j) * kernel(j, t);
+        }
 
-    auto modify = std::abs(L_i_new - L_i) + std::abs(L_j_new - L_j);
-
-    L_i = L_i_new;
-    L_j = L_j_new;
-
-    for (int t : {i, j}) {
-      auto&& v = is_violate(t, E[t]);
-      if (v == 2)
-        violate.push_front(t);
-      else if (v == 1)
-        violate.push_back(t);
-    }
-
-    EpochCallback(epoch);
+        modify += std::abs(L_i_new - L_i) + std::abs(L_j_new - L_j);
+        L_i = L_i_new;
+        L_j = L_j_new;
+      }
     ModifyCallback(modify);
+    EpochCallback(epoch);
+    if (modify < ModifyLimit) break;
   }
-  int supporting_vector_count = 0;
-  svm.bias = 0;
+  svm_float_t min_bias = NAN, max_bias = NAN;
   for (int t = 0; t < DataSetSize; t++) {
     if (sgn(svm.lambda[t]) == 0) continue;
-    supporting_vector_count++;
-    svm.bias -= E[t];
+    auto v = E[t] + svm.sample[t].classification;
+    if ((svm.sample[t].classification == 1 && v > max_bias) ||
+        std::isnan(max_bias))
+      max_bias = v;
+    else if ((svm.sample[t].classification == -1 && v < min_bias) ||
+             std::isnan(min_bias))
+      min_bias = v;
   }
-  svm.bias /= supporting_vector_count;
+  svm.bias = -(max_bias + min_bias) / 2;
+
+  delete kernel_save;
 }
 
 }  // namespace SVM
