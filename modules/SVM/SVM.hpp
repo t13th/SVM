@@ -14,7 +14,7 @@ namespace SVM {
 //////////pre declaration//////////
 
 template <std::size_t Dimension, std::floating_point svm_float_t = double>
-class LinearSVM;
+struct LinearSVM;
 template <std::size_t DataSetSize, std::size_t Dimension,
           std::floating_point svm_float_t = double>
 class SVM;
@@ -50,7 +50,7 @@ class SVM {
   kernel_function_t kernel;
 
  public:
-  friend class LinearSVM<Dimension, svm_float_t>;
+  friend struct LinearSVM<Dimension, svm_float_t>;
   friend void SMO<>(SVM<DataSetSize, Dimension, svm_float_t>&, svm_float_t,
                     std::size_t, svm_float_t, std::size_t,
                     const DataCallback<std::size_t>&,

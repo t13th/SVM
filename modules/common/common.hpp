@@ -1,15 +1,18 @@
 #ifndef __SVM_COMMON_HPP__
 #define __SVM_COMMON_HPP__
 
+#ifdef __USE_EIGEN__
 #include <Eigen/Eigen>
+#else
 #include <algorithm>
+#include <numeric>
+#endif
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
-#include <numeric>
 
 namespace SVM {
 

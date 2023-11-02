@@ -47,7 +47,7 @@ std::pair<std::vector<sample_t>, std::vector<sample_t>> BreastCancerWisconsin(
     };
     sample_t sample;
     char classification;
-    int ID;
+    [[maybe_unused]] int ID;
     // 4,M,R
     ID = get_number();
     if constexpr (Dimension == 11) {
