@@ -18,10 +18,12 @@ int main() {
   std::size_t seed =
       std::chrono::system_clock::now().time_since_epoch().count();
 
-  auto [train, test] = SVMDataLoader::BreastCancerWisconsin<11, 600, double>(
+  auto [train, test] = SVMDataLoader::BreastCancerWisconsin<32, 450, double>(
       std::string(PROJECT_ROOT) +
           "assets/datasets/breast+cancer+wisconsin+original/"
-          "breast-cancer-wisconsin.data",
+          // "breast-cancer-wisconsin.data",
+          // "wpbc.data",
+          "wdbc.data",
       seed);
 
   std::cout << std::endl;
@@ -45,9 +47,11 @@ int main() {
     }
   }
 
-  SVM::SVM<600, 9> svm(train.begin(), [](const auto& a, const auto& b) {
+  SVM::SVM<450, 30> svm(train.begin(), [](const auto& a, const auto& b) {
     auto x = (a * b);
-    return x;
+    return x * x * x / 32;
+    // auto&& d = a - b;
+    // return std::exp(d * d / 1.0 * (-1));
   });
 
   std::size_t progress = 0;
@@ -59,8 +63,8 @@ int main() {
   bool SMOFinished = false;
 
   auto SMOFunc = [&]() {
-    SVM::LinearSMO(
-        svm, 5e0, EpochLimit, 1e-1, seed,
+    SVM::SMO(
+        svm, 5e0, EpochLimit, 1e-11, seed,
         [&](std::size_t _progress) { progress = _progress; },
         [&](double _difference) { difference = _difference; });
     std::unique_lock<std::mutex> lock(mtx);

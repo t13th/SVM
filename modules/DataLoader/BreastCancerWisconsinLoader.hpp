@@ -1,9 +1,10 @@
 #ifndef __BREAST_CANCER_WISCONSIN_LOADER_HPP__
 #define __BREAST_CANCER_WISCONSIN_LOADER_HPP__
 
-#include <algorithm>
 #include <cstddef>
 #include <fstream>
+#include <iostream>
+#include <ostream>
 #include <random>
 #include <sstream>
 #include <stdexcept>
@@ -36,11 +37,15 @@ std::pair<std::vector<sample_t>, std::vector<sample_t>> BreastCancerWisconsin(
     std::getline(data_file, line);
     for (auto& c : line) c = c == ',' ? ' ' : c;
     std::istringstream is(line);
-    auto get_number = [&] {
+    auto get_number = [&] -> svm_float_t {
       std::string s;
       is >> s;
       try {
-        return std::stoi(s);
+        if constexpr (sizeof(long double) <= sizeof(svm_float_t))
+          return std::stold(s);
+        if constexpr (sizeof(double) <= sizeof(svm_float_t))
+          return std::stod(s);
+        if constexpr (sizeof(float) <= sizeof(svm_float_t)) return std::stof(s);
       } catch (...) {
         return 0;
       }
@@ -69,6 +74,19 @@ std::pair<std::vector<sample_t>, std::vector<sample_t>> BreastCancerWisconsin(
   std::vector<sample_t> sample;
   sample.reserve(DataSetSize);
   for (int i = 0; i < DataSetSize; i++) sample.push_back(get_sample());
+  for (int i = 0; i < Dimension - 2; i++) {
+    svm_float_t minv = sample[0].data[i], maxv = minv;
+    for (int j = 1; j < DataSetSize; j++) {
+      const auto& v = sample[j].data[i];
+      if (v > maxv)
+        maxv = v;
+      else if (v < minv)
+        minv = v;
+    }
+    for (int j = 0; j < DataSetSize; j++)
+      sample[j].data[i] = (sample[j].data[i] - minv) / (maxv - minv);
+  }
+  data_file.close();
 
   static std::mt19937 Engine(seed);
   std::ranges::shuffle(sample, Engine);
@@ -77,7 +95,6 @@ std::pair<std::vector<sample_t>, std::vector<sample_t>> BreastCancerWisconsin(
                            sample.end());
   sample.resize(DataSetSize - TrainDataSize);
   sample.shrink_to_fit();
-  data_file.close();
   return std::make_pair(train_sample, sample);
 }
 
