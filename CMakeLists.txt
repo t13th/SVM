@@ -7,11 +7,24 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 string(TIMESTAMP COMPILE_TIME %Y%m%d-%H%M%S)
 
+find_package(Eigen3 3.4 REQUIRED)
+include_directories(${EIGEN3_INCLUDE_DIRS})
+find_package(BLAS REQUIRED)
+find_package(LAPACK REQUIRED)
+
+add_definitions(-D__USE_EIGEN__)
+add_definitions(-DEIGEN_USE_BLAS)
+#add_definitions(-DEIGEN_USE_LAPACKE)
+#add_definitions(-DEIGEN_USE_GPU)
+
+add_definitions(-DPROJECT_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/")
+
 if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
   add_definitions(-D__DEBUG__)
 else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Ofast")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Ofast -march=native")
+  add_definitions(-DNDEBUG)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
