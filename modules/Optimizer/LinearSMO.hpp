@@ -6,8 +6,8 @@
 #include <numeric>
 #include <random>
 
-#include "../SVM/SVM.hpp"
-#include "../common/common.hpp"
+#include "SVM/SVM.hpp"
+#include "common/common.hpp"
 namespace SVM {
 
 template <std::size_t DataSetSize, std::size_t Dimension,

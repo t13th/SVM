@@ -9,13 +9,10 @@
 #include <ostream>
 #include <thread>
 
-#include "../../modules/LinearTestSampleGenerator/LinearTestSampleGenerator.hpp"
-#include "../../modules/Optimizer/SMO.hpp"
-#include "../../modules/SVM/SVM.hpp"
-#include "../../modules/Sample/Sample.hpp"
+#include "SVM.hpp"
 
-const int Dimension = 10000;
-const int n = 100;
+const int Dimension = 2;
+const int n = 500;
 
 void output(double x) {
   std::cout << std::setprecision(6) << std::setw(9) << x << " ";
@@ -24,12 +21,11 @@ void output(double x) {
 int main() {
   std::cout << std::fixed;
 
-  std::size_t seed = 0;
-  std::chrono::system_clock::now().time_since_epoch().count();
+  std::size_t seed =
+      std::chrono::system_clock::now().time_since_epoch().count();
   std::vector<SVM::Sample<Dimension>> data;
-  SVM::LinearTestSampleGenerator<Dimension, true> gen(seed);
-  for (int i = 0; i < n; i++) data.push_back(gen(0.1, 5e-2));
-  auto Seg = gen.GetSegmentation();
+  SVM::MoonTestSampleGenerator<> gen(seed, 0.75);
+  for (int i = 0; i < n; i++) data.push_back(gen());
 
   for (int cnt = 0; auto& v : data) {
     std::cout << std::setw(2) << v.classification << ":( ";
@@ -43,12 +39,12 @@ int main() {
 
   SVM::SVM<n, Dimension> svm(data.begin(), [](const auto& a, const auto& b) {
     auto&& d = a - b;
-    return std::exp(d * d / 0.01 * (-1));
+    return std::exp(d * d / 0.25 * (-1));
   });
 
   std::size_t progress = 0;
   double difference = 0;
-  const std::size_t EpochLimit = 1000;
+  const std::size_t EpochLimit = 20;
 
   std::mutex mtx;
   std::condition_variable cv;
@@ -56,7 +52,7 @@ int main() {
 
   auto SMOFunc = [&]() {
     SVM::SMO(
-        svm, 1e0, EpochLimit, 0e0, seed,
+        svm, 1e0, EpochLimit, 1.8e-13, seed,
         [&](std::size_t _progress) { progress = _progress; },
         [&](double _difference) { difference = _difference; });
     std::unique_lock<std::mutex> lock(mtx);
@@ -89,10 +85,24 @@ int main() {
   int correct_cnt = std::ranges::count_if(data, [&](const auto& sample) {
     return svm(sample.data) == sample.classification;
   });
-  std::cout << "Generator accuracy:" << std::setprecision(2) << std::setw(6)
-            << gen.FaultRate() * 100 << "%" << std::endl;
   std::cout << "Classify accuracy:" << std::setprecision(2) << std::setw(6)
             << double(correct_cnt) / n * 100 << "%" << std::endl;
+
+  std::fstream out("result.csv", std::ios::out);
+  for (int i = 0; auto [c, p] : data)
+    out << p[0] << "," << p[1] << "," << c << ","
+        << (SVM::sgn(svm.lambda[i++]) ? 5 : 1) << std::endl;
+  const int Slice = 1000;
+  for (int i = 0; i < Slice; i++)
+    for (int j = 0; j < Slice; j++) {
+      double x = i, y = j;
+      x = -4.5 + 9 * (x / Slice);
+      y = -4.5 + 9 * (y / Slice);
+      SVM::FixedVector<2> f;
+      f.content = {x, y};
+      out << svm(f) << std::endl;
+    }
+  out.close();
 
   return 0;
 }

@@ -6,9 +6,9 @@
 #include <functional>
 #include <numeric>
 
-#include "../Sample/Sample.hpp"
-#include "../SegmentPlane/SegmentPlane.hpp"
-#include "../common/common.hpp"
+#include "Sample/Sample.hpp"
+#include "SegmentPlane/SegmentPlane.hpp"
+#include "common/common.hpp"
 
 namespace SVM {
 //////////pre declaration//////////

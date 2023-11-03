@@ -12,8 +12,8 @@
 #include <random>
 #include <utility>
 
-#include "../SVM/SVM.hpp"
-#include "../common/common.hpp"
+#include "SVM/SVM.hpp"
+#include "common/common.hpp"
 
 namespace SVM {
 

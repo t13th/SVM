@@ -3,7 +3,7 @@
 
 #include <cstddef>
 
-#include "../common/common.hpp"
+#include "common/common.hpp"
 namespace SVM {
 
 template <std::size_t Dimension, std::floating_point svm_float_t = double>

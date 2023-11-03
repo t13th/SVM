@@ -11,13 +11,10 @@
 #include <thread>
 #include <vector>
 
-#include "../../modules/LinearTestSampleGenerator/LinearTestSampleGenerator.hpp"
-#include "../../modules/Optimizer/LinearSMO.hpp"
-#include "../../modules/SVM/SVM.hpp"
-#include "../../modules/Sample/Sample.hpp"
+#include "SVM.hpp"
 
 const int Dimension = 2;
-const int n = 200;
+const int n = 1000;
 
 void output(double x) {
   std::cout << std::setprecision(6) << std::setw(9) << x << " ";
@@ -29,8 +26,8 @@ int main() {
   std::size_t seed =
       std::chrono::system_clock::now().time_since_epoch().count();
   std::vector<SVM::Sample<Dimension>> data;
-  SVM::LinearTestSampleGenerator<Dimension, true> gen(seed);
-  for (int i = 0; i < n; i++) data.push_back(gen(0.1, 5e-2));
+  SVM::LinearTestSampleGenerator<Dimension> gen(seed, 0.1, 5e-2);
+  for (int i = 0; i < n; i++) data.push_back(gen());
   auto Seg = gen.GetSegmentation();
 
   std::ranges::for_each(Seg.weight, output);

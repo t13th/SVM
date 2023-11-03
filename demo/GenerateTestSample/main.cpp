@@ -4,8 +4,7 @@
 #include <iostream>
 #include <vector>
 
-#include "../../modules/LinearTestSampleGenerator/LinearTestSampleGenerator.hpp"
-#include "../../modules/Sample/Sample.hpp"
+#include "SVM.hpp"
 
 const int Dimension = 5;
 const int n = 30;

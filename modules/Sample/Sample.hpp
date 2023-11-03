@@ -3,7 +3,7 @@
 
 #include <cstddef>
 
-#include "../common/common.hpp"
+#include "common/common.hpp"
 
 namespace SVM {
 

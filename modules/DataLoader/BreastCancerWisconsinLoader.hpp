@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-#include "../Sample/Sample.hpp"
+#include "Sample/Sample.hpp"
 
 namespace SVMDataLoader {
 

@@ -5,10 +5,7 @@
 #include <string>
 #include <thread>
 
-#include "../../modules/DataLoader/BreastCancerWisconsinLoader.hpp"
-#include "../../modules/Optimizer/LinearSMO.hpp"
-#include "../../modules/Optimizer/SMO.hpp"
-#include "../../modules/SVM/SVM.hpp"
+#include "SVM.hpp"
 
 void output(double x) {
   std::cout << std::setprecision(6) << std::setw(9) << x << " ";
