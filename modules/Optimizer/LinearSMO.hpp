@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
+#include <limits>
 #include <numeric>
 #include <random>
 
@@ -67,18 +68,26 @@ void LinearSMO(SVM<DataSetSize, Dimension, svm_float_t>& svm,
     EpochCallback(epoch);
     if (modify < ModifyLimit) break;
   }
-  svm_float_t min_bias = NAN, max_bias = NAN;
+  svm_float_t min_bias_positive = std::numeric_limits<svm_float_t>::max(),
+              max_bias_positive = -std::numeric_limits<svm_float_t>::max();
+  svm_float_t min_bias_negative = std::numeric_limits<svm_float_t>::max(),
+              max_bias_negative = -std::numeric_limits<svm_float_t>::max();
   for (int t = 0; t < DataSetSize; t++) {
     if (sgn(svm.lambda[t]) == 0) continue;
     auto v = svm.sample[t].data * sum;
-    if ((svm.sample[t].classification == 1 && v > max_bias) ||
-        std::isnan(max_bias))
-      max_bias = v;
-    else if ((svm.sample[t].classification == -1 && v < min_bias) ||
-             std::isnan(min_bias))
-      min_bias = v;
+    if (svm.sample[t].classification == 1) {
+      if (v > max_bias_positive) max_bias_positive = v;
+      if (v < min_bias_positive) min_bias_positive = v;
+    } else {
+      if (v > max_bias_negative) max_bias_negative = v;
+      if (v < min_bias_negative) min_bias_negative = v;
+    }
   }
-  svm.bias = -(max_bias + min_bias) / 2;
+  if (std::abs(max_bias_positive) + std::abs(min_bias_negative) >
+      std::abs(min_bias_positive) + std::abs(max_bias_negative))
+    svm.bias = -(min_bias_positive + max_bias_negative) / 2;
+  else
+    svm.bias = -(min_bias_negative + max_bias_positive) / 2;
 }
 
 }  // namespace SVM

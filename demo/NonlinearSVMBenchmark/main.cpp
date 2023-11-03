@@ -91,7 +91,7 @@ int main() {
   std::fstream out("result.csv", std::ios::out);
   for (int i = 0; auto [c, p] : data)
     out << p[0] << "," << p[1] << "," << c << ","
-        << (SVM::sgn(svm.lambda[i++]) ? 5 : 1) << std::endl;
+        << (SVM::sgn(svm.lambda[i++]) ? 3 : 1) << std::endl;
   const int Slice = 1000;
   for (int i = 0; i < Slice; i++)
     for (int j = 0; j < Slice; j++) {

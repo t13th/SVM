@@ -23,4 +23,11 @@ plt.xlabel('X-axis')
 plt.ylabel('Y-axis')
 plt.title('SVM result')
 
+ax = plt.gca()
+ax.spines['right'].set_color('none')
+ax.spines['top'].set_color('none')
+ax.spines['bottom'].set_position(('data', 0))
+ax.spines['left'].set_position(('axes', 0.5))
+
+plt.savefig('plot.pdf')
 plt.show()

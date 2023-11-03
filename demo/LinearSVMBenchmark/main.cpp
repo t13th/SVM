@@ -14,7 +14,7 @@
 #include "SVM.hpp"
 
 const int Dimension = 2;
-const int n = 1000;
+const int n = 100;
 
 void output(double x) {
   std::cout << std::setprecision(6) << std::setw(9) << x << " ";
@@ -26,7 +26,7 @@ int main() {
   std::size_t seed =
       std::chrono::system_clock::now().time_since_epoch().count();
   std::vector<SVM::Sample<Dimension>> data;
-  SVM::LinearTestSampleGenerator<Dimension> gen(seed, 0.1, 5e-2);
+  SVM::LinearTestSampleGenerator<Dimension> gen(seed, 0.3, 0.1);
   for (int i = 0; i < n; i++) data.push_back(gen());
   auto Seg = gen.GetSegmentation();
 
@@ -51,7 +51,7 @@ int main() {
 
   std::size_t progress = 0;
   double difference = 0;
-  const std::size_t EpochLimit = 1e2;
+  const std::size_t EpochLimit = 1e3;
 
   std::mutex mtx;
   std::condition_variable cv;
@@ -59,7 +59,7 @@ int main() {
 
   auto SMOFunc = [&]() {
     SVM::LinearSMO(
-        svm, 1e0, EpochLimit, 3.35e-3, seed,
+        svm, 1e0, EpochLimit, 2e-12, seed,
         [&](std::size_t _progress) { progress = _progress; },
         [&](double _difference) { difference = _difference; });
     std::unique_lock<std::mutex> lock(mtx);
@@ -108,7 +108,7 @@ int main() {
       << "," << lsvm.segmentation.bias << std::endl;
   for (int i = 0; auto [c, p] : data)
     out << p[0] << "," << p[1] << "," << c << ","
-        << (SVM::sgn(svm.lambda[i++]) ? 5 : 1) << std::endl;
+        << (SVM::sgn(svm.lambda[i++]) ? 3 : 1) << std::endl;
   out.close();
 
   return 0;
