@@ -21,7 +21,6 @@ plt.contourf(X, Y, np.array([p[0]
 
 plt.xlabel('X-axis')
 plt.ylabel('Y-axis')
-plt.title('SVM result')
 
 ax = plt.gca()
 ax.spines['right'].set_color('none')

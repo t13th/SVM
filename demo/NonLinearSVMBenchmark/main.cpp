@@ -27,7 +27,7 @@ int main() {
   SVM::MoonTestSampleGenerator<> gen(seed, 0.75);
   for (int i = 0; i < n; i++) data.push_back(gen());
 
-  for (int cnt = 0; auto& v : data) {
+  for (int cnt = 0; auto &v : data) {
     std::cout << std::setw(2) << v.classification << ":( ";
     std::for_each_n(v.data.begin(), std::min(10, (int)Dimension), output);
     std::cout << ")" << std::endl;
@@ -37,9 +37,12 @@ int main() {
     }
   }
 
-  SVM::SVM<n, Dimension> svm(data.begin(), [](const auto& a, const auto& b) {
-    auto&& d = a - b;
-    return std::exp(d * d / 0.25 * (-1));
+  SVM::SVM<n, Dimension> svm(data.begin(), [](const SVM::FixedVector<2> &a,
+                                              const SVM::FixedVector<2> &b) {
+    auto x = a.dot(b);
+    return x * x * x;
+    SVM::FixedVector<2> &&d = a - b;
+    return std::exp(d.dot(d) / 0.25 * (-1));
   });
 
   std::size_t progress = 0;
@@ -82,7 +85,7 @@ int main() {
     }
   }
 
-  int correct_cnt = std::ranges::count_if(data, [&](const auto& sample) {
+  int correct_cnt = std::ranges::count_if(data, [&](const auto &sample) {
     return svm(sample.data) == sample.classification;
   });
   std::cout << "Classify accuracy:" << std::setprecision(2) << std::setw(6)
@@ -99,7 +102,7 @@ int main() {
       x = -4.5 + 9 * (x / Slice);
       y = -4.5 + 9 * (y / Slice);
       SVM::FixedVector<2> f;
-      f.content = {x, y};
+      f = {x, y};
       out << svm(f) << std::endl;
     }
   out.close();

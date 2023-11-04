@@ -3,8 +3,6 @@
 
 #include <cstddef>
 #include <fstream>
-#include <iostream>
-#include <ostream>
 #include <random>
 #include <sstream>
 #include <stdexcept>
@@ -15,7 +13,7 @@
 #include "Sample/Sample.hpp"
 
 namespace SVMDataLoader {
-
+// 对威斯康星乳腺癌数据集的三种规格特化
 template <std::size_t Dimension, std::size_t TrainDataSize,
           std::floating_point svm_float_t,
           class sample_t = SVM::Sample<Dimension - 2, svm_float_t>>
@@ -37,6 +35,7 @@ std::pair<std::vector<sample_t>, std::vector<sample_t>> BreastCancerWisconsin(
     std::getline(data_file, line);
     for (auto& c : line) c = c == ',' ? ' ' : c;
     std::istringstream is(line);
+    // 自动决定类型转化结果，并解决脏数据
     auto get_number = [&] -> svm_float_t {
       std::string s;
       is >> s;
@@ -74,10 +73,11 @@ std::pair<std::vector<sample_t>, std::vector<sample_t>> BreastCancerWisconsin(
   std::vector<sample_t> sample;
   sample.reserve(DataSetSize);
   for (int i = 0; i < DataSetSize; i++) sample.push_back(get_sample());
+  // 重映射到0-1
   for (int i = 0; i < Dimension - 2; i++) {
     svm_float_t minv = sample[0].data[i], maxv = minv;
     for (int j = 1; j < DataSetSize; j++) {
-      const auto& v = sample[j].data[i];
+      const svm_float_t& v = sample[j].data[i];
       if (v > maxv)
         maxv = v;
       else if (v < minv)
@@ -88,6 +88,7 @@ std::pair<std::vector<sample_t>, std::vector<sample_t>> BreastCancerWisconsin(
   }
   data_file.close();
 
+  // 打乱数据
   static std::mt19937 Engine(seed);
   std::ranges::shuffle(sample, Engine);
 

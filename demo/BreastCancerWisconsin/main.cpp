@@ -44,16 +44,17 @@ int main() {
     }
   }
 
-  SVM::SVM<450, 30> svm(train.begin(), [](const auto& a, const auto& b) {
-    auto x = (a * b);
-    return x * x * x / 32;
-    // auto&& d = a - b;
-    // return std::exp(d * d / 1.0 * (-1));
+  SVM::SVM<450, 30> svm(train.begin(), [](const SVM::FixedVector<30>& a,
+                                          const SVM::FixedVector<30>& b) {
+    SVM::FixedVector<30>&& d = a - b;
+    return std::exp(d.dot(d) / 0.2 * (-1)) / 30;
+    double x = a.dot(b);
+    return x;
   });
 
   std::size_t progress = 0;
   double difference = 0;
-  const std::size_t EpochLimit = 100;
+  const std::size_t EpochLimit = 20;
 
   std::mutex mtx;
   std::condition_variable cv;
@@ -61,7 +62,7 @@ int main() {
 
   auto SMOFunc = [&]() {
     SVM::SMO(
-        svm, 5e0, EpochLimit, 1e-11, seed,
+        svm, 5e0, EpochLimit, 1e-100, seed,
         [&](std::size_t _progress) { progress = _progress; },
         [&](double _difference) { difference = _difference; });
     std::unique_lock<std::mutex> lock(mtx);
@@ -69,7 +70,7 @@ int main() {
     cv.notify_one();
   };
 
-  std::size_t bar_len = 80;
+  std::size_t bar_len = 60;
   std::jthread smo_thread(SMOFunc);
   while (true) {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -93,7 +94,7 @@ int main() {
   int correct_cnt = std::ranges::count_if(test, [&](const auto& sample) {
     return svm(sample.data) == sample.classification;
   });
-  std::cout << "Classify accuracy:" << std::setprecision(2) << std::setw(6)
+  std::cout << "Classify accuracy:" << std::setprecision(3) << std::setw(6)
             << double(correct_cnt) / test.size() * 100 << "%" << std::endl;
 
   return 0;

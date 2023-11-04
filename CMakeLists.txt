@@ -14,9 +14,9 @@ include_directories(${EIGEN3_INCLUDE_DIRS})
 # include_directories(${MKL_INCLUDE})
 # link_directories(${MKL_LIBRARIES})
 
-add_definitions(-D__USE_EIGEN__)
+# add_definitions(-D__USE_EIGEN__)
 # add_definitions(-DEIGEN_USE_MKL_ALL)
-add_definitions(-DEIGEN_USE_BLAS)
+# add_definitions(-DEIGEN_USE_BLAS)
 # add_definitions(-DEIGEN_USE_GPU)
 # link_libraries(${mkl_core_file} ${mkl_intel_ilp64_file} "-lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl")
 

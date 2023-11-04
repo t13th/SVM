@@ -98,7 +98,7 @@ template <std::size_t DataSetSize, std::size_t Dimension,
           std::floating_point svm_float_t>
 ClassificationType SVM<DataSetSize, Dimension, svm_float_t>::operator()(
     const FixedVector<Dimension, svm_float_t>& data) {
-  auto classfication = std::transform_reduce(
+  svm_float_t classfication = std::transform_reduce(
       sample.begin(), sample.end(), lambda.begin(), bias, std::plus<>{},
       [&](const sample_t& xi, const svm_float_t& l) {
         return xi.classification * l * kernel(xi.data, data);
@@ -106,6 +106,7 @@ ClassificationType SVM<DataSetSize, Dimension, svm_float_t>::operator()(
   return sgn(classfication);
 }
 
+// 将普通SVM的参数合并为线性SVM的参数
 template <std::size_t Dimension, std::floating_point svm_float_t>
 template <std::size_t DataSetSize>
 LinearSVM<Dimension, svm_float_t>::LinearSVM(
@@ -123,7 +124,8 @@ LinearSVM<Dimension, svm_float_t>::LinearSVM(
 template <std::size_t Dimension, std::floating_point svm_float_t>
 ClassificationType LinearSVM<Dimension, svm_float_t>::operator()(
     const FixedVector<Dimension, svm_float_t>& data) {
-  auto&& classfication = segmentation.weight * data + segmentation.bias;
+  svm_float_t&& classfication =
+      segmentation.weight.dot(data) + segmentation.bias;
   return sgn(classfication);
 }
 

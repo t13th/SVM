@@ -9,6 +9,7 @@
 
 namespace SVM {
 
+// 生成双月牙形数据
 template <std::floating_point svm_float_t = double>
 class MoonTestSampleGenerator {
   std::mt19937_64 Engine;
@@ -36,6 +37,7 @@ Sample<2, svm_float_t> MoonTestSampleGenerator<svm_float_t>::operator()() {
   sample.data[0] = FloatDistribution(Engine);
   sample.data[1] = 2 * (sample.data[0] * sample.data[0] * 0.5 - 1.75) *
                    sample.classification;
+  // 添加散布
   sample.data[0] += SpreadDistribution(Engine) + sample.classification;
   sample.data[1] += SpreadDistribution(Engine);
   return sample;

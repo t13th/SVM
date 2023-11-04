@@ -3,11 +3,14 @@
 
 #ifdef __USE_EIGEN__
 #include <Eigen/Eigen>
+
+#include "Eigen/src/Core/Matrix.h"
 #else
 #include <algorithm>
+#include <array>
+#include <initializer_list>
 #include <numeric>
 #endif
-#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -16,39 +19,40 @@
 
 namespace SVM {
 
+// 对Eigen封装或直接实现向量类
 template <std::size_t Dimension, std::floating_point svm_float_t = double>
-struct FixedVector {
+class FixedVector {
   using value_type = svm_float_t;
-
-  FixedVector operator+(const FixedVector<Dimension, svm_float_t>&) const;
-  FixedVector operator-(const FixedVector<Dimension, svm_float_t>&) const;
-  svm_float_t operator*(const FixedVector<Dimension, svm_float_t>&) const;
-  FixedVector operator*(const svm_float_t&) const;
-
-#ifndef __USE_EIGEN__
+#ifdef __USE_EIGEN__
+  Eigen::Vector<svm_float_t, (int)Dimension> content;
+  using iterator = decltype(content.begin());
+  using const_iterator = decltype(content.cbegin());
+#else
   using iterator = value_type*;
   using const_iterator = const value_type*;
   std::array<svm_float_t, Dimension> content;
+#endif
+ public:
+  FixedVector(const std::initializer_list<value_type>& v) {
+    std::ranges::copy(v, content.begin());
+  }
+  FixedVector() = default;
+  FixedVector(const FixedVector&) = default;
+
+  FixedVector operator+(const FixedVector<Dimension, svm_float_t>&) const;
+  FixedVector operator-(const FixedVector<Dimension, svm_float_t>&) const;
+  svm_float_t dot(const FixedVector<Dimension, svm_float_t>&) const;
+  FixedVector operator*(const svm_float_t&) const;
+
   constexpr const_iterator begin() const { return content.begin(); }
   constexpr const_iterator end() const { return content.end(); }
   constexpr iterator begin() { return content.begin(); }
   constexpr iterator end() { return content.end(); }
   svm_float_t& operator[](int index) { return content[index]; }
-#else
-  using iterator = value_type*;
-  using const_iterator = const value_type*;
-  Eigen::Vector<svm_float_t, (int)Dimension> content;
-  constexpr auto begin() const { return content.begin(); }
-  constexpr auto end() const { return content.end(); }
-  constexpr auto begin() { return content.begin(); }
-  constexpr auto end() { return content.end(); }
-  svm_float_t& operator[](int index) { return content[index]; }
-
-#endif
 };
 
 using ClassificationType = int;
-const double ClassificationEps = 1e-3;
+const double ClassificationEps = 1e-6;
 
 template <std::floating_point svm_float_t = double>
 int sgn(svm_float_t x, svm_float_t = ClassificationEps);
@@ -68,11 +72,11 @@ template <std::floating_point svm_float_t>
 int sgn(svm_float_t x, svm_float_t eps) {
   if (std::abs(x) > eps) return x > 0 ? 1 : -1;
   return 0;
-}
+}  // namespace SVM
 
 #ifndef __USE_EIGEN__
 template <std::size_t Dimension, std::floating_point svm_float_t>
-svm_float_t FixedVector<Dimension, svm_float_t>::operator*(
+svm_float_t FixedVector<Dimension, svm_float_t>::dot(
     const FixedVector<Dimension, svm_float_t>& a) const {
   return std::transform_reduce(content.begin(), content.end(),
                                a.content.begin(), svm_float_t(0));
@@ -104,9 +108,9 @@ FixedVector<Dimension, svm_float_t>::operator*(const svm_float_t& k) const {
 }
 #else
 template <std::size_t Dimension, std::floating_point svm_float_t>
-svm_float_t FixedVector<Dimension, svm_float_t>::operator*(
+svm_float_t FixedVector<Dimension, svm_float_t>::dot(
     const FixedVector<Dimension, svm_float_t>& a) const {
-  return a.content.dot(content);
+  return content.dot(a.content);
 }
 template <std::size_t Dimension, std::floating_point svm_float_t>
 FixedVector<Dimension, svm_float_t>
@@ -132,7 +136,6 @@ FixedVector<Dimension, svm_float_t>::operator*(const svm_float_t& k) const {
   return a;
 }
 #endif
-
 };  // namespace SVM
 
 #endif

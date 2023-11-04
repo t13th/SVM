@@ -14,7 +14,7 @@
 #include "SVM.hpp"
 
 const int Dimension = 2;
-const int n = 100;
+const int n = 50;
 
 void output(double x) {
   std::cout << std::setprecision(6) << std::setw(9) << x << " ";
@@ -44,9 +44,10 @@ int main() {
     }
   }
 
-  SVM::SVM<n, Dimension> svm(data.begin(), [](const auto& a, const auto& b) {
-    auto&& d = a - b;
-    return std::exp(d * d / 0.01 * (-1));
+  SVM::SVM<n, Dimension> svm(data.begin(), [](const SVM::FixedVector<2>& a,
+                                              const SVM::FixedVector<2>& b) {
+    SVM::FixedVector<2>&& d = a - b;
+    return std::exp(d.dot(d) / 0.01 * (-1));
   });
 
   std::size_t progress = 0;

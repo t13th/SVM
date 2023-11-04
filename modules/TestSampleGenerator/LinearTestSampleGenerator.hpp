@@ -17,6 +17,7 @@ class LinearTestSampleGenerator {
   std::size_t GenCount = 0, ErrCount = 0;
   std::mt19937_64 Engine;
   std::uniform_real_distribution<svm_float_t> FloatDistribution;
+  // 基于Segmentation对空间进行分割
   SegmentPlane<Dimension, svm_float_t> Segmentation;
   svm_float_t FlipPossibility, FlipDistance;
 
@@ -62,12 +63,15 @@ LinearTestSampleGenerator<Dimension, svm_float_t>::operator()() {
   GenCount++;
   Sample<Dimension, svm_float_t> sample;
   std::ranges::generate(sample.data, get_float);
-  auto &&classfication = Segmentation.weight * sample.data + Segmentation.bias;
+  svm_float_t &&classfication =
+      Segmentation.weight.dot(sample.data) + Segmentation.bias;
 
   static std::uniform_real_distribution<svm_float_t> RandDistribuion(0, 1);
+  // 概率改变属性
   if (RandDistribuion(Engine) < FlipPossibility &&
       std::abs(classfication) <
-          FlipDistance * std::sqrt(Segmentation.weight * Segmentation.weight)) {
+          FlipDistance *
+              std::sqrt(Segmentation.weight.dot(Segmentation.weight))) {
     classfication *= -1;
     ErrCount++;
   }
