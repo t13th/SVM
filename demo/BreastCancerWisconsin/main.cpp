@@ -14,7 +14,7 @@ int main() {
   std::cout << std::fixed;
   std::size_t seed =
       std::chrono::system_clock::now().time_since_epoch().count();
-
+  // 读取不同的数据文件
   auto [train, test] = SVMDataLoader::BreastCancerWisconsin<32, 450, double>(
       std::string(PROJECT_ROOT) +
           "assets/datasets/breast+cancer+wisconsin+original/"

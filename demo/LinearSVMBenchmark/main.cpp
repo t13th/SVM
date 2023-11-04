@@ -107,6 +107,7 @@ int main() {
   std::fstream out("result.csv", std::ios::out);
   out << lsvm.segmentation.weight[0] << "," << lsvm.segmentation.weight[1]
       << "," << lsvm.segmentation.bias << std::endl;
+  // 支持向量数据点更大
   for (int i = 0; auto [c, p] : data)
     out << p[0] << "," << p[1] << "," << c << ","
         << (SVM::sgn(svm.lambda[i++]) ? 3 : 1) << std::endl;

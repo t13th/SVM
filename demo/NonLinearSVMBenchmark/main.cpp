@@ -90,11 +90,13 @@ int main() {
   });
   std::cout << "Classify accuracy:" << std::setprecision(2) << std::setw(6)
             << double(correct_cnt) / n * 100 << "%" << std::endl;
-
+  // 支持向量数据点更大
   std::fstream out("result.csv", std::ios::out);
   for (int i = 0; auto [c, p] : data)
     out << p[0] << "," << p[1] << "," << c << ","
         << (SVM::sgn(svm.lambda[i++]) ? 3 : 1) << std::endl;
+
+  // 运算量较大，会卡顿
   const int Slice = 1000;
   for (int i = 0; i < Slice; i++)
     for (int j = 0; j < Slice; j++) {

@@ -13,7 +13,7 @@
 #include "Sample/Sample.hpp"
 
 namespace SVMDataLoader {
-// 对威斯康星乳腺癌数据集的三种规格特化
+// 基于数据维数特化威斯康星乳腺癌数据集的三种规格，请保证数据维数和文件对应
 template <std::size_t Dimension, std::size_t TrainDataSize,
           std::floating_point svm_float_t,
           class sample_t = SVM::Sample<Dimension - 2, svm_float_t>>
@@ -52,7 +52,7 @@ std::pair<std::vector<sample_t>, std::vector<sample_t>> BreastCancerWisconsin(
     sample_t sample;
     char classification;
     [[maybe_unused]] int ID;
-    // 4,M,R
+    // 4,M,R设为1
     ID = get_number();
     if constexpr (Dimension == 11) {
       for (auto& x : sample.data) x = get_number();
